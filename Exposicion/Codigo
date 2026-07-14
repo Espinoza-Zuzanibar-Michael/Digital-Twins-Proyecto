@@ -1,0 +1,83 @@
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <sstream>
+#include <thread>
+#include <chrono>
+
+// --- ESTRUCTURAS DE DATOS ---
+struct DatosSensores {
+    double rpm;
+    double temperatura_real;
+};
+
+// --- PASO 2: EL GEMELO DIGITAL ---
+class GemeloDigital {
+public:
+    std::string analizarEstado(DatosSensores datosFisicos) {
+        
+        // A. Calcular el estado teórico (La Física ideal)
+        double temp_ideal = 25.0 + (datosFisicos.rpm * 0.02);
+        
+        // B. Detectar anomalías comparando Realidad vs Teoría
+        std::string estado = "Normal";
+        
+        if (datosFisicos.temperatura_real > temp_ideal + 10.0) {
+             estado = "ALERTA: Desviacion Termica - Posible Friccion";
+        }
+        
+        if (datosFisicos.temperatura_real >= 95.0) {
+            estado = "PELIGRO CRITICO: Sobrecalentamiento";
+        }
+
+        // C. Construir el texto en formato JSON manualmente usando stringstream
+        std::stringstream json_stream;
+        json_stream << "{ "
+                    << "\"rpm_real\": " << datosFisicos.rpm << ", "
+                    << "\"temp_real\": " << datosFisicos.temperatura_real << ", "
+                    << "\"temp_ideal\": " << temp_ideal << ", "
+                    << "\"estado_gemelo\": \"" << estado << "\""
+                    << " }";
+        
+        return json_stream.str();
+    }
+};
+
+int main() {
+    GemeloDigital miTurbinaVirtual;
+
+    // --- PASO 1: LEER DATOS FÍSICOS DESDE EL TXT ---
+    std::ifstream archivoTelemetria("telemetria.txt");
+    
+    if (!archivoTelemetria.is_open()) {
+        std::cerr << "Error: No se pudo abrir el archivo telemetria.txt. Asegurate de crearlo en OnlineGDB." << std::endl;
+        return 1;
+    }
+
+    std::string linea;
+    int segundo = 1;
+    
+    std::cout << "Iniciando simulacion del Gemelo Digital...\n" << std::endl;
+
+    while (std::getline(archivoTelemetria, linea)) {
+        std::istringstream streamLinea(linea);
+        DatosSensores datosHoy;
+        
+        if (streamLinea >> datosHoy.rpm >> datosHoy.temperatura_real) {
+            
+            // --- PASO 2 y 3: ANALIZAR Y GENERAR JSON ---
+            std::string diagnostico = miTurbinaVirtual.analizarEstado(datosHoy);
+            
+            // Texto actualizado para reflejar la dinámica de la presentación
+            std::cout << "[Segundo " << segundo << "] JSON Generado (Listo para sincronizar) -> \n" 
+                      << diagnostico << "\n\n";
+            
+            segundo++;
+            std::this_thread::sleep_for(std::chrono::seconds(2));
+        }
+    }
+
+    archivoTelemetria.close();
+    std::cout << "Fin de la simulacion." << std::endl;
+    return 0;
+}
